@@ -1,4 +1,4 @@
-﻿using System.Xml.Linq;
+using System.Xml.Linq;
 
 public class ConsoleWorkspace
 {
@@ -356,7 +356,7 @@ public class Library : LibraryOperations
 
         if (findUser(user_id).canBorrow())
         {
-            findUser(user_id).borrowed_books.Add(findBook(isbn));
+            findUser(user_id).AddBorrowedBook(findBook(isbn));
 
             var book = findBook(isbn);
             book.WasTaken = true;     //Меняю значение в словаре так, ведь иначе не позволит мне добраться до value
@@ -374,9 +374,9 @@ public class Library : LibraryOperations
         try { findUser(user_id); } catch (KeyNotFoundException) { Console.WriteLine("\nThere is no user with such id. Try again\n"); return false; }
 
 
-        if (findUser(user_id).borrowed_books.Contains(findBook(isbn)))
+        if (findUser(user_id).BorrowedBooks.Contains(findBook(isbn)))
         {
-            findUser(user_id).borrowed_books.Remove(findBook(isbn));
+            findUser(user_id).RemoveBorrowedBook(findBook(isbn));
 
             var book = findBook(isbn);
             book.WasTaken = false;     //Меняю значение в словаре так, ведь иначе не позволит мне добраться до value
@@ -392,7 +392,7 @@ public class Library : LibraryOperations
         Dictionary<Book, DateTime> tmpdict = new Dictionary<Book, DateTime>();
         foreach (var user in users.Values)
         {
-            foreach (Book book in user.borrowed_books)
+            foreach (Book book in user.BorrowedBooks)
             {
                 if (book.WhenTaken > DateTime.Now.AddDays(-user.getBorrowDays()))
                 {
@@ -459,7 +459,21 @@ public abstract class User
     protected string name;
     protected string user_id;
     protected string email;
-    public List<Book> borrowed_books;
+    protected List<Book> borrowed_books;
+
+    public void AddBorrowedBook(Book book)
+    { 
+        borrowed_books.Add(book);
+    }
+
+    public void RemoveBorrowedBook(Book book)
+    {
+        borrowed_books.Add(book);
+    }
+    public List<Book> BorrowedBooks
+    {
+        get { return borrowed_books; }
+    }
 
     public User(string name, string user_id, string email)
     {
