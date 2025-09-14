@@ -217,12 +217,11 @@ public class ConsoleWorkspace
                 user_ans_2 = Console.ReadLine();
                 if (MyLib.borrowBook(user_ans_1, user_ans_2))
                 {
-                    MyLib.removeBook(user_ans_2);
-                    Console.WriteLine("\n The book was given to the user! \n");
+                    Console.WriteLine("\nThe book was given to the user! \n");
                 }
                 else
                 {
-                    Console.WriteLine("\n The book can't be given to the user! \n");
+                    Console.WriteLine("\nThe book can't be given to the user! \n");
                 }
                 break;
 
@@ -233,15 +232,24 @@ public class ConsoleWorkspace
                 user_ans_2 = Console.ReadLine();
                 if (MyLib.returnBook(user_ans_1, user_ans_2))
                 {
-                    Console.WriteLine("\n The book was returned! \n");
+                    Console.WriteLine("\nThe book was returned! \n");
                 }
                 else
                 {
-                    Console.WriteLine("\n The book wasn't returned! Try again!\n");
+                    Console.WriteLine("\nThe book wasn't returned! Try again!\n");
                 }
                 break;
 
-            case "3": break;
+            case "3":
+                if (MyLib.getOverdueBooks().Count != 0)
+                {
+                    Console.WriteLine(MyLib.getOverdueBooks().ToString());
+                }
+                else
+                {
+                    Console.WriteLine("\nThere are no overdue books!\n");
+                }
+                break;
 
             default: Console.WriteLine("\nYou have entered incomprehensible input. Try again\n"); ActivateMenu(); break;
         }
@@ -270,7 +278,7 @@ public class Library : LibraryOperations
 {
     Dictionary<string, Book> books; //Это как hashmap, для быстрого поиска
     Dictionary<string, User> users;
-    List<int> borrowingHistory;
+    Dictionary<Book, DateTime> takenbooks;
 
     public Library()
     {
@@ -288,14 +296,7 @@ public class Library : LibraryOperations
 
     public bool removeBook(string isbn) //UPDATE
     {
-        if (books.Remove(isbn))
-        {
-            return true;
-        }
-        else
-        {
-             return false;
-        }
+        return books.Remove(isbn);
     }
 
     public Book findBook(string isbn)
@@ -311,7 +312,7 @@ public class Library : LibraryOperations
             case "Author":
                 foreach (var x in books)
                 {
-                    if (x.Value.author == query)
+                    if (x.Value.GetAuthor == query)
                         temp_list.Add(x.Value);
                 }
                 break;
@@ -319,7 +320,7 @@ public class Library : LibraryOperations
             case "Title":
                 foreach (var x in books)
                 {
-                    if (x.Value.title == query)
+                    if (x.Value.GetTitle == query)
                         temp_list.Add(x.Value);
                 }
                 break;
@@ -356,6 +357,12 @@ public class Library : LibraryOperations
         if (findUser(user_id).canBorrow())
         {
             findUser(user_id).borrowed_books.Add(findBook(isbn));
+
+            var book = findBook(isbn);
+            book.WasTaken = true;     //Меняю значение в словаре так, ведь иначе не позволит мне добраться до value
+            book.WhenTaken = DateTime.Now;
+            books[isbn] = book;
+
             return true;
         }
         else { return false; }
@@ -370,36 +377,80 @@ public class Library : LibraryOperations
         if (findUser(user_id).borrowed_books.Contains(findBook(isbn)))
         {
             findUser(user_id).borrowed_books.Remove(findBook(isbn));
+
+            var book = findBook(isbn);
+            book.WasTaken = false;     //Меняю значение в словаре так, ведь иначе не позволит мне добраться до value
+            book.WhenTaken = DateTime.MinValue;
+            books[isbn] = book;
+
             return true;
         }
         else { return false; }
     }
     public Dictionary<Book, DateTime> getOverdueBooks()
     {
-        return
+        Dictionary<Book, DateTime> tmpdict = new Dictionary<Book, DateTime>();
+        foreach (var user in users.Values)
+        {
+            foreach (Book book in user.borrowed_books)
+            {
+                if (book.WhenTaken > DateTime.Now.AddDays(-user.getBorrowDays()))
+                {
+                    tmpdict.Add(book, book.WhenTaken.AddDays(user.getBorrowDays()));
+                }    
+            }
+                   
+        }
+        return tmpdict;
     }
 }
 
 
 public struct Book // Использовать структуру уместно, так как книга - объект с большим количеством свойств, который не требует функционал класса
 {
-    public string title;
-    public string author;
-    public string isbn;
-    public string genre;
+    private string title;
+    private string author;
+    private string isbn;
+    private string genre;
+    private bool taken;
+    private DateTime time_taken;
 
-    public Book (string title, string author, string isbn, string genre) //проверить публик и прайват
+    public Book (string title, string author, string isbn, string genre)
     {
         this.title = title;
         this.author = author;
         this.isbn = isbn;
         this.genre = genre;
+        taken = false;
+        time_taken = DateTime.MinValue;
     }
 
     public override string ToString()
     {
         return $"\nTitle: {title}\nAuthor: {author}\nIsbn: {isbn}\nGenre:{genre}\n";
     }
+
+    internal bool WasTaken
+    {
+        get { return taken; }
+        set { taken = value; }
+    }
+
+    public DateTime WhenTaken
+    {
+        get { return time_taken; }
+        set { time_taken = value; }
+    }
+
+    public string GetAuthor
+    {
+        get { return author; }
+    }
+    public string GetTitle
+    {
+        get { return title; }
+    }
+
 }
 
 
